@@ -171,12 +171,12 @@ Returns a dictionary containing all local variables created during execution. Th
 
 This package is designed to provide a safe execution environment by:
 
-- Using AST parsing instead of `exec` or `eval`
+- Using AST parsing and a custom executor function instead of `exec` or `eval`
 - Whitelisting allowed operations
 - Limiting iteration
-- Restricting module imports and file operations
+- No module imports or file operations
+- No access to dangerous python built-ins
 - At this early stage, feel free to open an issue if you find a security vulnerability
-- The interpreter disallows access to dangerous python built-ins
 
 ## License
 
