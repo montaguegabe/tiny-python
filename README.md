@@ -105,8 +105,7 @@ Parameters:
 - `max_recursion_depth`: Maximum recursion depth (default: 100)
 - `allowed_classes`: List of classes that can be instantiated (must be dataclasses)
 - `global_vars`: Dictionary of global variables to make available
-- `allow_dataclass_methods`: Allow calling methods on dataclass instances (default: False)
-- `allow_global_functions`: Allow calling functions from global_vars (default: False)
+- `allowed_functions`: List of functions that may be called.
 
 Returns the last expression value or explicit return value.
 
@@ -123,8 +122,7 @@ Returns the last expression value or explicit return value.
 - Variable assignment: `=`, `+=`, `-=`, `*=`, `/=`, `//=`, `%=`, `**=`
 - Tuple unpacking in assignments and for loops
 - Dataclass instantiation (with `allowed_classes`)
-- Custom functions (with `global_vars` and `allow_global_functions=True`)
-- Dataclass methods (with `allow_dataclass_methods=True`)
+- Custom functions (with `allowed_functions`)
 
 ## Security
 

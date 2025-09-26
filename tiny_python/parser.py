@@ -17,11 +17,13 @@ class ParsedNode:
 
 
 class TinyPythonParser:
-    def __init__(self, allowed_classes=None, allow_dataclass_methods=False,
-                 allow_global_functions=False, global_vars=None, allowed_functions=None):
+    def __init__(
+        self,
+        allowed_classes=None,
+        global_vars=None,
+        allowed_functions=None,
+    ):
         self.allowed_classes = allowed_classes or []
-        self.allow_dataclass_methods = allow_dataclass_methods
-        self.allow_global_functions = allow_global_functions
         self.global_vars = global_vars or {}
         self.allowed_functions = allowed_functions or []
         self.allowed_node_types = {
@@ -102,14 +104,14 @@ class TinyPythonParser:
         if isinstance(node.func, ast.Name):
             if node.func.id not in ALLOWED_BUILTINS:
                 # Allow global functions if flag is set
-                if self.allow_global_functions and node.func.id in self.global_vars:
+                if node.func.id in self.global_vars:
                     # Check that the global var is callable
                     if callable(self.global_vars[node.func.id]):
                         return  # Allow this function call
                 # Check if function is in allowed_functions list
                 # We check by name since we don't have the actual function object here
                 for func in self.allowed_functions:
-                    if hasattr(func, '__name__') and func.__name__ == node.func.id:
+                    if hasattr(func, "__name__") and func.__name__ == node.func.id:
                         return  # Allow this function call
                 # Allow uppercase names (class constructors)
                 if not node.func.id[0].isupper():

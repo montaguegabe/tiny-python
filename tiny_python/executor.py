@@ -41,21 +41,15 @@ class Executor:
         max_recursion_depth: int = 100,
         allowed_classes: Optional[List[Type]] = None,
         global_vars: Optional[Dict[str, Any]] = None,
-        allow_dataclass_methods: bool = False,  # Deprecated - will be ignored
-        allow_global_functions: bool = False,
         allowed_functions: Optional[List[Callable]] = None,
     ):
         self.max_iterations = max_iterations
         self.max_recursion_depth = max_recursion_depth
         self.allowed_classes = allowed_classes or []
         self.global_vars = global_vars or {}
-        # Note: allow_dataclass_methods is now ignored for security
-        self.allow_global_functions = allow_global_functions
         self.allowed_functions = allowed_functions or []
         self.parser = TinyPythonParser(
             allowed_classes=allowed_classes,
-            allow_dataclass_methods=False,  # Always False for security
-            allow_global_functions=allow_global_functions,
             global_vars=global_vars,
             allowed_functions=allowed_functions,
         )
@@ -492,7 +486,6 @@ def tiny_exec(
     max_recursion_depth: int = 100,
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
-    allow_global_functions: bool = False,
     allowed_functions: Optional[List[Callable]] = None,
 ) -> Any:
     executor = Executor(
@@ -500,7 +493,6 @@ def tiny_exec(
         max_recursion_depth=max_recursion_depth,
         allowed_classes=allowed_classes,
         global_vars=global_vars,
-        allow_global_functions=allow_global_functions,
         allowed_functions=allowed_functions,
     )
     return executor.execute(code)

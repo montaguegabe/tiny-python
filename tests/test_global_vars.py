@@ -37,7 +37,7 @@ def test_global_functions():
 result = custom_func(5)
 result
 """
-    assert tiny_exec(code, allowed_functions=[custom_func], allow_global_functions=True) == 10
+    assert tiny_exec(code, allowed_functions=[custom_func]) == 10
 
 
 def test_global_constants():
@@ -60,6 +60,5 @@ int(result)
         code,
         allowed_functions=[math.sqrt],
         global_vars={"x": 3, "y": 4},
-        allow_global_functions=True,
     )
     assert result == 5
