@@ -1,4 +1,4 @@
-# tiny-python (pre-release)
+# tiny-python
 
 **WARNING: This library is still under development and needs to be thoroughly tested for security. Use at your own risk.**
 
