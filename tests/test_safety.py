@@ -108,3 +108,70 @@ def my_func():
         tiny_exec("""
 lambda x: x * 2
 """)
+
+
+def test_max_iterations_per_loop():
+    """Test that max_iterations_per_loop limits individual loop iterations."""
+
+    # Test with for loop exceeding limit
+    with pytest.raises(ExecutionError, match="Exceeded maximum iterations per loop"):
+        tiny_exec(
+            """
+total = 0
+for i in range(1000):
+    total += i
+total
+""",
+            max_iterations_per_loop=100,
+        )
+
+    # Test with while loop exceeding limit
+    with pytest.raises(ExecutionError, match="Exceeded maximum iterations per loop"):
+        tiny_exec(
+            """
+i = 0
+while i < 1000:
+    i += 1
+i
+""",
+            max_iterations_per_loop=100,
+        )
+
+    # Test that loops within limit work fine
+    result = tiny_exec(
+        """
+total = 0
+for i in range(50):
+    total += i
+total
+""",
+        max_iterations_per_loop=100,
+    )
+    assert result == sum(range(50))
+
+    # Test nested loops - each loop has its own counter
+    result = tiny_exec(
+        """
+total = 0
+for i in range(10):
+    for j in range(10):
+        total += 1
+total
+""",
+        max_iterations_per_loop=15,  # Each loop runs 10 times, which is under 15
+    )
+    assert result == 100
+
+    # Test that break statement works and doesn't trigger limit
+    result = tiny_exec(
+        """
+i = 0
+while True:
+    i += 1
+    if i == 5:
+        break
+i
+""",
+        max_iterations_per_loop=10,
+    )
+    assert result == 5

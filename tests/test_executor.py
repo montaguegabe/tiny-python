@@ -7,9 +7,6 @@ def test_executor_initialization():
     executor = Executor(max_iterations=1000)
     assert executor.max_iterations == 1000
 
-    executor = Executor(max_recursion_depth=50)
-    assert executor.max_recursion_depth == 50
-
 
 def test_multiple_executions():
     executor = Executor()

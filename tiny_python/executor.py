@@ -37,14 +37,14 @@ class SafeDataClass:
 class Executor:
     def __init__(
         self,
-        max_iterations: int = 10000,
-        max_recursion_depth: int = 100,
+        max_iterations: int = 1000,
+        max_iterations_per_loop: int = 100,
         allowed_classes: Optional[List[Type]] = None,
         global_vars: Optional[Dict[str, Any]] = None,
         allowed_functions: Optional[List[Callable]] = None,
     ):
         self.max_iterations = max_iterations
-        self.max_recursion_depth = max_recursion_depth
+        self.max_iterations_per_loop = max_iterations_per_loop
         self.allowed_classes = allowed_classes or []
         self.global_vars = global_vars or {}
         self.allowed_functions = allowed_functions or []
@@ -110,8 +110,6 @@ class Executor:
         self.iteration_count += 1
         if self.iteration_count > self.max_iterations:
             raise ExecutionError(f"Exceeded maximum iterations ({self.max_iterations})")
-        if self.recursion_depth > self.max_recursion_depth:
-            raise ExecutionError(f"Exceeded maximum recursion depth ({self.max_recursion_depth})")
 
     def _execute_node(self, node: ast.AST) -> Any:
         self._check_limits()
@@ -316,7 +314,14 @@ class Executor:
 
     def _handle_for(self, node: ast.For):
         iterable = self._execute_node(node.iter)
+        loop_iterations = 0
         for item in iterable:
+            loop_iterations += 1
+            if loop_iterations > self.max_iterations_per_loop:
+                raise ExecutionError(
+                    f"Exceeded maximum iterations per loop ({self.max_iterations_per_loop})"
+                )
+
             if isinstance(node.target, ast.Name):
                 self.local_scopes[-1][node.target.id] = item
             elif isinstance(node.target, (ast.Tuple, ast.List)):
@@ -351,7 +356,14 @@ class Executor:
                         return result
 
     def _handle_while(self, node: ast.While):
+        loop_iterations = 0
         while self._execute_node(node.test):
+            loop_iterations += 1
+            if loop_iterations > self.max_iterations_per_loop:
+                raise ExecutionError(
+                    f"Exceeded maximum iterations per loop ({self.max_iterations_per_loop})"
+                )
+
             for stmt in node.body:
                 result = self._execute_node(stmt)
                 if isinstance(result, ReturnValue):
@@ -482,15 +494,15 @@ class ContinueLoop:
 
 def tiny_exec(
     code: str,
-    max_iterations: int = 10000,
-    max_recursion_depth: int = 100,
+    max_iterations: int = 1000,
+    max_iterations_per_loop: int = 100,
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
     allowed_functions: Optional[List[Callable]] = None,
 ) -> Any:
     executor = Executor(
         max_iterations=max_iterations,
-        max_recursion_depth=max_recursion_depth,
+        max_iterations_per_loop=max_iterations_per_loop,
         allowed_classes=allowed_classes,
         global_vars=global_vars,
         allowed_functions=allowed_functions,
