@@ -104,15 +104,49 @@ class Executor:
         result = None
         for node in tree.body:
             result = self._execute_node(node)
-            if isinstance(result, ReturnValue):
-                self.last_result = result.value
-                return self.local_scopes[0]
 
-        # Store the last result
-        self.last_result = result
+        # Store the last result (convert if it's a SafeDataClass)
+        self.last_result = self._convert_safe_dataclasses_in_value(result)
 
-        # Return the local variables dictionary
-        return self.local_scopes[0]
+        # Convert SafeDataClass instances to real dataclasses before returning
+        return self._convert_safe_dataclasses(self.local_scopes[0])
+
+    def _convert_safe_dataclasses(self, locals_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert SafeDataClass instances back to real dataclasses."""
+        converted = {}
+        for key, value in locals_dict.items():
+            if isinstance(value, SafeDataClass):
+                # Find the matching class
+                for cls in self.allowed_classes:
+                    if cls.__name__ == value._class_name:
+                        # Convert attributes recursively
+                        converted_attrs = self._convert_safe_dataclasses_in_value(value._attributes)
+                        # Create real dataclass instance
+                        converted[key] = cls(**converted_attrs)
+                        break
+                else:
+                    # If class not found, keep the SafeDataClass
+                    converted[key] = value
+            else:
+                converted[key] = self._convert_safe_dataclasses_in_value(value)
+        return converted
+
+    def _convert_safe_dataclasses_in_value(self, value: Any) -> Any:
+        """Recursively convert SafeDataClass instances in nested structures."""
+        if isinstance(value, SafeDataClass):
+            for cls in self.allowed_classes:
+                if cls.__name__ == value._class_name:
+                    converted_attrs = self._convert_safe_dataclasses_in_value(value._attributes)
+                    return cls(**converted_attrs)
+            return value
+        elif isinstance(value, dict):
+            return {k: self._convert_safe_dataclasses_in_value(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [self._convert_safe_dataclasses_in_value(item) for item in value]
+        elif isinstance(value, tuple):
+            return tuple(self._convert_safe_dataclasses_in_value(item) for item in value)
+        else:
+            return value
 
     def _check_limits(self):
         self.iteration_count += 1
