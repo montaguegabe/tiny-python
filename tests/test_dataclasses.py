@@ -47,13 +47,13 @@ def test_dataclass_with_methods():
 rect = Rectangle(10, 20)
 rect.area()
 """
-    assert safe_exec(code, allowed_classes=[Rectangle]) == 200
+    assert safe_exec(code, allowed_classes=[Rectangle], allow_dataclass_methods=True) == 200
 
     code = """
 rect = Rectangle(10, 20)
 rect.perimeter()
 """
-    assert safe_exec(code, allowed_classes=[Rectangle]) == 60
+    assert safe_exec(code, allowed_classes=[Rectangle], allow_dataclass_methods=True) == 60
 
 
 def test_multiple_dataclasses():
@@ -75,7 +75,7 @@ p = Point(0, 0)
 c = Circle(p, 5)
 c.area()
 """
-    result = safe_exec(code, allowed_classes=[Point, Circle])
+    result = safe_exec(code, allowed_classes=[Point, Circle], allow_dataclass_methods=True)
     assert abs(result - 78.54) < 0.01
 
 

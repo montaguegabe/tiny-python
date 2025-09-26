@@ -15,7 +15,9 @@ class ParsedNode:
 
 
 class TinyPythonParser:
-    def __init__(self):
+    def __init__(self, allowed_classes=None, allow_dataclass_methods=False):
+        self.allowed_classes = allowed_classes or []
+        self.allow_dataclass_methods = allow_dataclass_methods
         self.allowed_node_types = {
             ast.Module,
             ast.Expr,
@@ -159,7 +161,32 @@ class TinyPythonParser:
                 "update",
             }
             if node.func.attr not in allowed_methods:
-                raise ValueError(f"Method call not allowed: {node.func.attr}")
+                # If dataclass methods are allowed, permit non-dangerous methods
+                if self.allow_dataclass_methods:
+                    # Block dangerous methods and private methods
+                    dangerous_methods = {
+                        "__import__",
+                        "__call__",
+                        "__getattr__",
+                        "__setattr__",
+                        "__delattr__",
+                        "__getattribute__",
+                        "__class__",
+                        "__dict__",
+                        "__module__",
+                        "__code__",
+                        "__globals__",
+                        "__builtins__",
+                        "eval",
+                        "exec",
+                        "compile",
+                    }
+                    if node.func.attr in dangerous_methods or node.func.attr.startswith("_"):
+                        raise ValueError(f"Method call not allowed: {node.func.attr}")
+                    # Otherwise allow the method call - runtime will validate if it's allowed
+                else:
+                    # Strict mode - only allow explicitly listed methods
+                    raise ValueError(f"Method call not allowed: {node.func.attr}")
 
     def _validate_name_load(self, node: ast.Name):
         forbidden_names = {

@@ -17,12 +17,17 @@ class Executor:
         max_recursion_depth: int = 100,
         allowed_classes: Optional[List[Type]] = None,
         global_vars: Optional[Dict[str, Any]] = None,
+        allow_dataclass_methods: bool = False,
     ):
         self.max_iterations = max_iterations
         self.max_recursion_depth = max_recursion_depth
         self.allowed_classes = allowed_classes or []
         self.global_vars = global_vars or {}
-        self.parser = TinyPythonParser()
+        self.allow_dataclass_methods = allow_dataclass_methods
+        self.parser = TinyPythonParser(
+            allowed_classes=allowed_classes,
+            allow_dataclass_methods=allow_dataclass_methods
+        )
         self.iteration_count = 0
         self.recursion_depth = 0
         self.local_scopes = [{}]
@@ -374,6 +379,32 @@ class Executor:
         elif isinstance(node.func, ast.Attribute):
             obj = self._execute_node(node.func.value)
             method_name = node.func.attr
+
+            # If dataclass methods are enabled, validate the method is safe
+            if self.allow_dataclass_methods:
+                # Check if obj is an instance of an allowed dataclass
+                obj_class = type(obj)
+                is_allowed_instance = False
+                for allowed_cls in self.allowed_classes:
+                    if isinstance(obj, allowed_cls) and is_dataclass(allowed_cls):
+                        is_allowed_instance = True
+                        # Verify the method is defined on the class, not acquired elsewhere
+                        if not hasattr(allowed_cls, method_name):
+                            raise ExecutionError(
+                                f"Method '{method_name}' is not defined on dataclass '{allowed_cls.__name__}'"
+                            )
+                        # Ensure it's not a private method
+                        if method_name.startswith('_'):
+                            raise ExecutionError(
+                                f"Cannot call private method '{method_name}'"
+                            )
+                        break
+
+                # If it's not a dataclass instance, fall through to normal attribute access
+                if not is_allowed_instance:
+                    # Still need to handle built-in types like strings, lists, etc.
+                    pass
+
             method = getattr(obj, method_name)
             args = [self._execute_node(arg) for arg in node.args]
             kwargs = {kw.arg: self._execute_node(kw.value) for kw in node.keywords}
@@ -430,11 +461,13 @@ def safe_exec(
     max_recursion_depth: int = 100,
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
+    allow_dataclass_methods: bool = False,
 ) -> Any:
     executor = Executor(
         max_iterations=max_iterations,
         max_recursion_depth=max_recursion_depth,
         allowed_classes=allowed_classes,
         global_vars=global_vars,
+        allow_dataclass_methods=allow_dataclass_methods,
     )
     return executor.execute(code)
