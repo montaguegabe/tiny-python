@@ -35,6 +35,7 @@ tiny_exec(llm_output, allowed_classes=[MyInsecureClass])
 To use this library properly, you should avoid providing it access to dataclasses with insecure side effects, or that are used in an insecure way. Care must be taken when you pass any of the following extra arguments to the `tiny_exec` (see more docs on these below):
 
 - `allowed_classes`
+- `allowed_functions`
 - `global_vars`
 
 ## Features
