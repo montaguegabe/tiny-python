@@ -113,38 +113,57 @@ class Executor:
 
     def _convert_safe_dataclasses(self, locals_dict: Dict[str, Any]) -> Dict[str, Any]:
         """Convert SafeDataClass instances back to real dataclasses."""
+        # Track already converted objects to handle cycles
+        converted_cache = {}
         converted = {}
         for key, value in locals_dict.items():
-            if isinstance(value, SafeDataClass):
-                # Find the matching class
-                for cls in self.allowed_classes:
-                    if cls.__name__ == value._class_name:
-                        # Convert attributes recursively
-                        converted_attrs = self._convert_safe_dataclasses_in_value(value._attributes)
-                        # Create real dataclass instance
-                        converted[key] = cls(**converted_attrs)
-                        break
-                else:
-                    # If class not found, keep the SafeDataClass
-                    converted[key] = value
-            else:
-                converted[key] = self._convert_safe_dataclasses_in_value(value)
+            converted[key] = self._convert_safe_dataclasses_in_value(value, converted_cache)
         return converted
 
-    def _convert_safe_dataclasses_in_value(self, value: Any) -> Any:
+    def _convert_safe_dataclasses_in_value(self, value: Any, converted_cache: Dict = None) -> Any:
         """Recursively convert SafeDataClass instances in nested structures."""
+        if converted_cache is None:
+            converted_cache = {}
+
+        # Handle SafeDataClass conversion
         if isinstance(value, SafeDataClass):
+            # Check if we've already started converting this object (cycle detection)
+            obj_id = id(value)
+            if obj_id in converted_cache:
+                return converted_cache[obj_id]
+
+            # Find the matching class
             for cls in self.allowed_classes:
                 if cls.__name__ == value._class_name:
-                    converted_attrs = self._convert_safe_dataclasses_in_value(value._attributes)
-                    return cls(**converted_attrs)
+                    # First create a placeholder to handle cycles
+                    # We need to handle any required fields
+                    from dataclasses import fields, MISSING
+
+                    # Gather all field names and their values
+                    field_values = {}
+                    for field in fields(cls):
+                        field_name = field.name
+                        if field_name in value._attributes:
+                            # We'll set this value, but need to avoid recursion first
+                            field_values[field_name] = None
+
+                    # Create instance with None/default values first
+                    instance = object.__new__(cls)
+                    converted_cache[obj_id] = instance
+
+                    # Now convert and set actual values
+                    for field_name, field_value in value._attributes.items():
+                        converted_value = self._convert_safe_dataclasses_in_value(field_value, converted_cache)
+                        setattr(instance, field_name, converted_value)
+
+                    return instance
             return value
         elif isinstance(value, dict):
-            return {k: self._convert_safe_dataclasses_in_value(v) for k, v in value.items()}
+            return {k: self._convert_safe_dataclasses_in_value(v, converted_cache) for k, v in value.items()}
         elif isinstance(value, list):
-            return [self._convert_safe_dataclasses_in_value(item) for item in value]
+            return [self._convert_safe_dataclasses_in_value(item, converted_cache) for item in value]
         elif isinstance(value, tuple):
-            return tuple(self._convert_safe_dataclasses_in_value(item) for item in value)
+            return tuple(self._convert_safe_dataclasses_in_value(item, converted_cache) for item in value)
         else:
             return value
 

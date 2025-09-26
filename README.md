@@ -53,60 +53,110 @@ pip install tiny-python
 ## Quick Start
 
 ```python
-from tiny_python import tiny_exec
+from tiny_python import tiny_exec, tiny_eval_last
 from dataclasses import dataclass
+from typing import List, Optional
 
-# Basic math operations
-result = tiny_exec("2 + 3 * 4")
-print(result)  # 14
-
-# String operations
-result = tiny_exec("""
-text = "hello"
-result = text.upper() + " WORLD"
-result
-""")
-print(result)  # "HELLO WORLD"
-
-# Using dataclasses
+# Define dataclasses that model an organization
+# Note: These can have circular references to each other
 @dataclass
-class Point:
-    x: float
-    y: float
+class Person:
+    name: str
+    role: str
+    team: Optional['Team'] = None
 
-result = tiny_exec("""
-p = Point(3, 4)
-distance = (p.x ** 2 + p.y ** 2) ** 0.5
-distance
-""", allowed_classes=[Point])
-print(result)  # 5.0
+@dataclass
+class Team:
+    name: str
+    description: str
+    leader: Optional[Person] = None
+    members: List[Person] = None
 
-# Control flow
-result = tiny_exec("""
-total = 0
-for i in range(5):
-    if i % 2 == 0:
-        total += i
-total
-""")
-print(result)  # 6
+    def __post_init__(self):
+        if self.members is None:
+            self.members = []
+
+@dataclass
+class Project:
+    title: str
+    team: Team
+    budget: float
+    priority: int
+
+# Use tiny_exec to safely execute LLM-generated code that builds complex structures
+code = """
+# Create team members
+alice = Person("Alice", "Engineer")
+bob = Person("Bob", "Designer")
+charlie = Person("Charlie", "Manager")
+
+# Create a team with a leader
+dev_team = Team("Development Team", "Builds awesome products", charlie)
+dev_team.members = [alice, bob, charlie]
+
+# Set team references (creating cycles)
+alice.team = dev_team
+bob.team = dev_team
+charlie.team = dev_team
+
+# Create a project for this team
+project = Project("New Website", dev_team, 50000.0, 1)
+
+# Calculate some metrics
+team_size = len(dev_team.members)
+budget_per_person = project.budget / team_size
+high_priority = project.priority == 1
+
+# Store results in a summary
+summary = {
+    "project_name": project.title,
+    "team_leader": dev_team.leader.name,
+    "team_size": team_size,
+    "budget_per_person": budget_per_person,
+    "is_high_priority": high_priority
+}
+"""
+
+# Execute the code safely with the allowed dataclasses
+result = tiny_exec(code, allowed_classes=[Person, Team, Project])
+
+# Access the created objects and computed values from the returned locals
+print(result["summary"])
+# {'project_name': 'New Website', 'team_leader': 'Charlie', 'team_size': 3,
+#  'budget_per_person': 16666.666666666668, 'is_high_priority': True}
+
+print(f"Team leader: {result['dev_team'].leader.name}")  # Charlie
+print(f"First team member's team: {result['alice'].team.name}")  # Development Team
+
+# Or use tiny_eval_last to get just the last expression value
+last_value = tiny_eval_last("2 + 3 * 4")
+print(last_value)  # 14
 ```
 
 ## API
 
 ### `tiny_exec(code, **kwargs)`
 
-Execute tiny-python code safely.
+Execute tiny-python code safely and return the local variables.
 
 Parameters:
 
 - `code`: String containing the code to execute
-- `max_iterations`: Maximum number of iterations allowed (default: 10000)
+- `max_iterations`: Maximum number of total operations allowed (default: 1000)
+- `max_iterations_per_loop`: Maximum iterations for any single loop (default: 100)
 - `allowed_classes`: List of classes that can be instantiated (must be dataclasses)
 - `global_vars`: Dictionary of global variables to make available
-- `allowed_functions`: List of functions that may be called.
+- `allowed_functions`: List of functions that may be called
 
-Returns the last expression value or explicit return value.
+Returns a dictionary containing all local variables created during execution. The executor instance is stored in the returned dictionary under the key `"__executor__"`, which provides access to `executor.last_result` for the value of the last expression.
+
+### `tiny_eval_last(code, **kwargs)`
+
+Execute tiny-python code safely and return only the last expression value.
+
+Parameters: Same as `tiny_exec`
+
+Returns the value of the last expression or explicit return value (for backward compatibility with test suites).
 
 ## Supported Operations
 
@@ -114,14 +164,13 @@ Returns the last expression value or explicit return value.
 - Comparison: `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`, `is`, `is not`
 - Boolean: `and`, `or`, `not`
 - Built-in functions: `len`, `range`, `int`, `float`, `str`, `bool`, `list`, `dict`, `tuple`, `set`, `abs`, `min`, `max`, `sum`, `round`, `sorted`, `reversed`, `enumerate`, `zip`, `all`, `any`, `isinstance`, `type`
-- String methods: `upper`, `lower`, `strip`, `lstrip`, `rstrip`, `split`, `join`, `replace`, `startswith`, `endswith`, `find`, `rfind`, `format`, `capitalize`, `title`, `isdigit`, `isalpha`, `isalnum`, `isspace`
-- List methods: `append`, `extend`, `insert`, `remove`, `pop`, `clear`, `index`, `count`, `sort`, `reverse`, `copy`
-- Dict methods: `keys`, `values`, `items`, `get`, `update`
+- String methods: `upper`, `lower`, `strip`, `lstrip`, `rstrip`, `split`, `join`, `replace`, `startswith`, `endswith`, `find`, `rfind`, `format`, `capitalize`, `title`, `isdigit`, `isalpha`, `isalnum`, `isspace`, and many more string methods
 - Control flow: `if`, `elif`, `else`, `for`, `while`, `break`, `continue`, `return`, `pass`
 - Variable assignment: `=`, `+=`, `-=`, `*=`, `/=`, `//=`, `%=`, `**=`
 - Tuple unpacking in assignments and for loops
-- Dataclass instantiation (with `allowed_classes`)
+- Dataclass instantiation and attribute access (with `allowed_classes`)
 - Custom functions (with `allowed_functions`)
+- Dictionary and list indexing/slicing
 
 ## Security
 
