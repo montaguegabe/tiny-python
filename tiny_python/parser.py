@@ -2,6 +2,8 @@ import ast
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
+from .constants import ALLOWED_BUILTINS, ALLOWED_METHODS
+
 
 @dataclass
 class ParsedNode:
@@ -16,11 +18,12 @@ class ParsedNode:
 
 class TinyPythonParser:
     def __init__(self, allowed_classes=None, allow_dataclass_methods=False,
-                 allow_global_functions=False, global_vars=None):
+                 allow_global_functions=False, global_vars=None, allowed_functions=None):
         self.allowed_classes = allowed_classes or []
         self.allow_dataclass_methods = allow_dataclass_methods
         self.allow_global_functions = allow_global_functions
         self.global_vars = global_vars or {}
+        self.allowed_functions = allowed_functions or []
         self.allowed_node_types = {
             ast.Module,
             ast.Expr,
@@ -97,105 +100,34 @@ class TinyPythonParser:
 
     def _validate_call(self, node: ast.Call):
         if isinstance(node.func, ast.Name):
-            allowed_builtins = {
-                "len",
-                "range",
-                "int",
-                "float",
-                "str",
-                "bool",
-                "list",
-                "dict",
-                "tuple",
-                "set",
-                "abs",
-                "min",
-                "max",
-                "sum",
-                "round",
-                "sorted",
-                "reversed",
-                "enumerate",
-                "zip",
-                "all",
-                "any",
-                "isinstance",
-                "type",
-            }
-            if node.func.id not in allowed_builtins:
+            if node.func.id not in ALLOWED_BUILTINS:
                 # Allow global functions if flag is set
                 if self.allow_global_functions and node.func.id in self.global_vars:
                     # Check that the global var is callable
                     if callable(self.global_vars[node.func.id]):
                         return  # Allow this function call
+                # Check if function is in allowed_functions list
+                # We check by name since we don't have the actual function object here
+                for func in self.allowed_functions:
+                    if hasattr(func, '__name__') and func.__name__ == node.func.id:
+                        return  # Allow this function call
                 # Allow uppercase names (class constructors)
                 if not node.func.id[0].isupper():
                     raise ValueError(f"Function call not allowed: {node.func.id}")
         elif isinstance(node.func, ast.Attribute):
-            allowed_methods = {
-                "append",
-                "extend",
-                "insert",
-                "remove",
-                "pop",
-                "clear",
-                "index",
-                "count",
-                "sort",
-                "reverse",
-                "copy",
-                "upper",
-                "lower",
-                "strip",
-                "lstrip",
-                "rstrip",
-                "split",
-                "join",
-                "replace",
-                "startswith",
-                "endswith",
-                "find",
-                "rfind",
-                "format",
-                "capitalize",
-                "title",
-                "isdigit",
-                "isalpha",
-                "isalnum",
-                "isspace",
-                "keys",
-                "values",
-                "items",
-                "get",
-                "update",
-            }
-            if node.func.attr not in allowed_methods:
-                # If dataclass methods are allowed, permit non-dangerous methods
-                if self.allow_dataclass_methods:
-                    # Block dangerous methods and private methods
-                    dangerous_methods = {
-                        "__import__",
-                        "__call__",
-                        "__getattr__",
-                        "__setattr__",
-                        "__delattr__",
-                        "__getattribute__",
-                        "__class__",
-                        "__dict__",
-                        "__module__",
-                        "__code__",
-                        "__globals__",
-                        "__builtins__",
-                        "eval",
-                        "exec",
-                        "compile",
-                    }
-                    if node.func.attr in dangerous_methods or node.func.attr.startswith("_"):
-                        raise ValueError(f"Method call not allowed: {node.func.attr}")
-                    # Otherwise allow the method call - runtime will validate if it's allowed
-                else:
-                    # Strict mode - only allow explicitly listed methods
-                    raise ValueError(f"Method call not allowed: {node.func.attr}")
+            # Check if this is an allowed method call
+            # We'll validate at runtime what type the object is
+            method_name = node.func.attr
+
+            # Check if method is in any of the allowed lists
+            is_allowed = False
+            for type_name, allowed_methods in ALLOWED_METHODS.items():
+                if method_name in allowed_methods:
+                    is_allowed = True
+                    break
+
+            if not is_allowed:
+                raise ValueError(f"Method '{method_name}' is not allowed")
 
     def _validate_name_load(self, node: ast.Name):
         forbidden_names = {

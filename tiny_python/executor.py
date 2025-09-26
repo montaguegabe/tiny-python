@@ -1,13 +1,37 @@
 import ast
 import operator
 from dataclasses import fields, is_dataclass
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Type
 
+from .constants import ALLOWED_METHODS, BUILTIN_FUNCTIONS
 from .parser import TinyPythonParser
 
 
 class ExecutionError(Exception):
     pass
+
+
+class SafeDataClass:
+    """Internal representation of a dataclass as a simple dict.
+    This prevents any method access and only allows attribute access via dict lookups.
+    """
+
+    def __init__(self, class_name: str, attributes: Dict[str, Any]):
+        self._class_name = class_name
+        self._attributes = attributes
+
+    def get_attribute(self, name: str) -> Any:
+        if name not in self._attributes:
+            raise AttributeError(f"'{self._class_name}' object has no attribute '{name}'")
+        return self._attributes[name]
+
+    def set_attribute(self, name: str, value: Any):
+        if name not in self._attributes:
+            raise AttributeError(f"'{self._class_name}' object has no attribute '{name}'")
+        self._attributes[name] = value
+
+    def __repr__(self):
+        return f"{self._class_name}({', '.join(f'{k}={repr(v)}' for k, v in self._attributes.items())})"
 
 
 class Executor:
@@ -17,20 +41,23 @@ class Executor:
         max_recursion_depth: int = 100,
         allowed_classes: Optional[List[Type]] = None,
         global_vars: Optional[Dict[str, Any]] = None,
-        allow_dataclass_methods: bool = False,
+        allow_dataclass_methods: bool = False,  # Deprecated - will be ignored
         allow_global_functions: bool = False,
+        allowed_functions: Optional[List[Callable]] = None,
     ):
         self.max_iterations = max_iterations
         self.max_recursion_depth = max_recursion_depth
         self.allowed_classes = allowed_classes or []
         self.global_vars = global_vars or {}
-        self.allow_dataclass_methods = allow_dataclass_methods
+        # Note: allow_dataclass_methods is now ignored for security
         self.allow_global_functions = allow_global_functions
+        self.allowed_functions = allowed_functions or []
         self.parser = TinyPythonParser(
             allowed_classes=allowed_classes,
-            allow_dataclass_methods=allow_dataclass_methods,
+            allow_dataclass_methods=False,  # Always False for security
             allow_global_functions=allow_global_functions,
             global_vars=global_vars,
+            allowed_functions=allowed_functions,
         )
         self.iteration_count = 0
         self.recursion_depth = 0
@@ -70,31 +97,7 @@ class Executor:
             ast.Not: operator.not_,
         }
 
-        self.builtin_functions = {
-            "len": len,
-            "range": range,
-            "int": int,
-            "float": float,
-            "str": str,
-            "bool": bool,
-            "list": list,
-            "dict": dict,
-            "tuple": tuple,
-            "set": set,
-            "abs": abs,
-            "min": min,
-            "max": max,
-            "sum": sum,
-            "round": round,
-            "sorted": sorted,
-            "reversed": lambda x: list(reversed(x)),
-            "enumerate": enumerate,
-            "zip": zip,
-            "all": all,
-            "any": any,
-            "isinstance": isinstance,
-            "type": type,
-        }
+        self.builtin_functions = BUILTIN_FUNCTIONS
 
     def execute(self, code: str) -> Any:
         self.iteration_count = 0
@@ -187,6 +190,10 @@ class Executor:
             for cls in self.allowed_classes:
                 if cls.__name__ == name:
                     return cls
+            # Check allowed functions
+            for func in self.allowed_functions:
+                if hasattr(func, "__name__") and func.__name__ == name:
+                    return func
             raise NameError(f"Name '{name}' is not defined")
         elif isinstance(node.ctx, ast.Store):
             return node.id
@@ -251,7 +258,12 @@ class Executor:
                 obj[key] = value
             elif isinstance(target, ast.Attribute):
                 obj = self._execute_node(target.value)
-                setattr(obj, target.attr, value)
+                if isinstance(obj, SafeDataClass):
+                    obj.set_attribute(target.attr, value)
+                else:
+                    raise ExecutionError(
+                        f"Attribute assignment not allowed on {type(obj).__name__} objects"
+                    )
             elif isinstance(target, (ast.Tuple, ast.List)):
                 if not isinstance(value, (tuple, list)):
                     raise TypeError("Cannot unpack non-sequence")
@@ -376,7 +388,7 @@ class Executor:
                     return self._instantiate_class(cls, node)
 
             func = self._handle_name(node.func)
-            if callable(func):
+            if callable(func) and func in self.allowed_functions:
                 args = [self._execute_node(arg) for arg in node.args]
                 kwargs = {kw.arg: self._execute_node(kw.value) for kw in node.keywords}
                 return func(*args, **kwargs)
@@ -386,32 +398,17 @@ class Executor:
             obj = self._execute_node(node.func.value)
             method_name = node.func.attr
 
-            # If dataclass methods are enabled, validate the method is safe
-            if self.allow_dataclass_methods:
-                # Check if obj is an instance of an allowed dataclass
-                is_allowed_instance = False
-                for allowed_cls in self.allowed_classes:
-                    if isinstance(obj, allowed_cls) and is_dataclass(allowed_cls):
-                        is_allowed_instance = True
-                        # Verify the method is defined on the class, not acquired elsewhere
-                        if not hasattr(allowed_cls, method_name):
-                            raise ExecutionError(
-                                f"Method '{method_name}' is not defined on dataclass '{allowed_cls.__name__}'"
-                            )
-                        # Ensure it's not a private method
-                        if method_name.startswith("_"):
-                            raise ExecutionError(f"Cannot call private method '{method_name}'")
-                        break
+            # Check if this is an allowed method for the object's type
+            obj_type = type(obj).__name__
 
-                # If it's not a dataclass instance, fall through to normal attribute access
-                if not is_allowed_instance:
-                    # Still need to handle built-in types like strings, lists, etc.
-                    pass
-
-            method = getattr(obj, method_name)
-            args = [self._execute_node(arg) for arg in node.args]
-            kwargs = {kw.arg: self._execute_node(kw.value) for kw in node.keywords}
-            return method(*args, **kwargs)
+            if obj_type in ALLOWED_METHODS and method_name in ALLOWED_METHODS[obj_type]:
+                # This is an allowed method, execute it
+                method = getattr(obj, method_name)
+                args = [self._execute_node(arg) for arg in node.args]
+                kwargs = {kw.arg: self._execute_node(kw.value) for kw in node.keywords}
+                return method(*args, **kwargs)
+            else:
+                raise ExecutionError(f"Method '{method_name}' is not allowed on type '{obj_type}'")
         else:
             raise ExecutionError("Complex function calls not supported")
 
@@ -424,12 +421,39 @@ class Executor:
 
         field_names = [f.name for f in fields(cls)]
 
+        # Build the attributes dict with default values first
+        attributes = {}
+        from dataclasses import MISSING
+
+        for field in fields(cls):
+            if field.default is not MISSING:
+                attributes[field.name] = field.default
+            elif field.default_factory is not MISSING:  # has default_factory
+                attributes[field.name] = field.default_factory()
+            # else: no default, will be set by args/kwargs
+
+        # Apply positional arguments
         if args:
             for i, arg in enumerate(args):
                 if i < len(field_names):
-                    kwargs[field_names[i]] = arg
+                    attributes[field_names[i]] = arg
 
-        return cls(**kwargs)
+        # Apply keyword arguments
+        for key, value in kwargs.items():
+            if key not in field_names:
+                raise TypeError(f"'{cls.__name__}' got an unexpected keyword argument '{key}'")
+            attributes[key] = value
+
+        # Check that all required fields have values
+        for field in fields(cls):
+            if (
+                field.name not in attributes
+                and field.default is MISSING
+                and field.default_factory is MISSING
+            ):
+                raise TypeError(f"'{cls.__name__}' missing required argument: '{field.name}'")
+
+        return SafeDataClass(cls.__name__, attributes)
 
     def _handle_subscript(self, node: ast.Subscript):
         obj = self._execute_node(node.value)
@@ -442,7 +466,11 @@ class Executor:
 
     def _handle_attribute(self, node: ast.Attribute):
         obj = self._execute_node(node.value)
-        return getattr(obj, node.attr)
+        if isinstance(obj, SafeDataClass):
+            return obj.get_attribute(node.attr)
+        else:
+            # For non-dataclass objects, we don't allow attribute access
+            raise ExecutionError(f"Attribute access not allowed on {type(obj).__name__} objects")
 
 
 class ReturnValue:
@@ -464,15 +492,15 @@ def tiny_exec(
     max_recursion_depth: int = 100,
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
-    allow_dataclass_methods: bool = False,
     allow_global_functions: bool = False,
+    allowed_functions: Optional[List[Callable]] = None,
 ) -> Any:
     executor = Executor(
         max_iterations=max_iterations,
         max_recursion_depth=max_recursion_depth,
         allowed_classes=allowed_classes,
         global_vars=global_vars,
-        allow_dataclass_methods=allow_dataclass_methods,
         allow_global_functions=allow_global_functions,
+        allowed_functions=allowed_functions,
     )
     return executor.execute(code)

@@ -97,15 +97,3 @@ def test_isinstance():
     assert tiny_exec("isinstance('hello', str)")
     assert tiny_exec("isinstance([1, 2], list)")
     assert not tiny_exec("isinstance(5, str)")
-
-
-def test_type():
-    code = """
-type(5).__name__
-"""
-    assert tiny_exec(code) == "int"
-
-    code = """
-type("hello").__name__
-"""
-    assert tiny_exec(code) == "str"
