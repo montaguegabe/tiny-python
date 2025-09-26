@@ -18,15 +18,19 @@ class Executor:
         allowed_classes: Optional[List[Type]] = None,
         global_vars: Optional[Dict[str, Any]] = None,
         allow_dataclass_methods: bool = False,
+        allow_global_functions: bool = False,
     ):
         self.max_iterations = max_iterations
         self.max_recursion_depth = max_recursion_depth
         self.allowed_classes = allowed_classes or []
         self.global_vars = global_vars or {}
         self.allow_dataclass_methods = allow_dataclass_methods
+        self.allow_global_functions = allow_global_functions
         self.parser = TinyPythonParser(
             allowed_classes=allowed_classes,
-            allow_dataclass_methods=allow_dataclass_methods
+            allow_dataclass_methods=allow_dataclass_methods,
+            allow_global_functions=allow_global_functions,
+            global_vars=global_vars
         )
         self.iteration_count = 0
         self.recursion_depth = 0
@@ -383,7 +387,6 @@ class Executor:
             # If dataclass methods are enabled, validate the method is safe
             if self.allow_dataclass_methods:
                 # Check if obj is an instance of an allowed dataclass
-                obj_class = type(obj)
                 is_allowed_instance = False
                 for allowed_cls in self.allowed_classes:
                     if isinstance(obj, allowed_cls) and is_dataclass(allowed_cls):
@@ -462,6 +465,7 @@ def safe_exec(
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
     allow_dataclass_methods: bool = False,
+    allow_global_functions: bool = False,
 ) -> Any:
     executor = Executor(
         max_iterations=max_iterations,
@@ -469,5 +473,6 @@ def safe_exec(
         allowed_classes=allowed_classes,
         global_vars=global_vars,
         allow_dataclass_methods=allow_dataclass_methods,
+        allow_global_functions=allow_global_functions,
     )
     return executor.execute(code)

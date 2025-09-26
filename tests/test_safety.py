@@ -5,10 +5,10 @@ from tiny_python.executor import ExecutionError
 
 
 def test_import_blocked():
-    with pytest.raises(SyntaxError):
+    with pytest.raises(ValueError):
         safe_exec("import os")
 
-    with pytest.raises(SyntaxError):
+    with pytest.raises(ValueError):
         safe_exec("from os import path")
 
 

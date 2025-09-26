@@ -37,7 +37,7 @@ def test_global_functions():
 result = custom_func(5)
 result
 """
-    assert safe_exec(code, global_vars={"custom_func": custom_func}) == 10
+    assert safe_exec(code, global_vars={"custom_func": custom_func}, allow_global_functions=True) == 10
 
 
 def test_global_constants():
@@ -56,5 +56,5 @@ def test_mixed_globals():
 result = sqrt(x ** 2 + y ** 2)
 int(result)
 """
-    result = safe_exec(code, global_vars={"sqrt": math.sqrt, "x": 3, "y": 4})
+    result = safe_exec(code, global_vars={"sqrt": math.sqrt, "x": 3, "y": 4}, allow_global_functions=True)
     assert result == 5
