@@ -175,3 +175,46 @@ i
         max_iterations_per_loop=10,
     )
     assert result == 5
+
+
+def test_max_iterations_vs_max_iterations_per_loop():
+    """Test interaction between max_iterations and max_iterations_per_loop."""
+
+    # max_iterations_per_loop should trigger first if lower
+    with pytest.raises(ExecutionError, match="Exceeded maximum iterations per loop"):
+        tiny_exec(
+            """
+for i in range(50):
+    pass
+""",
+            max_iterations=1000,
+            max_iterations_per_loop=40,
+        )
+
+    # max_iterations should trigger for total operations across multiple loops
+    with pytest.raises(ExecutionError, match="Exceeded maximum iterations"):
+        tiny_exec(
+            """
+# Each loop is under per-loop limit but total exceeds max_iterations
+for i in range(30):
+    pass
+for j in range(30):
+    pass
+for k in range(30):
+    pass
+""",
+            max_iterations=50,  # Total will be 90 iterations
+            max_iterations_per_loop=40,  # Each loop is under this
+        )
+
+    # Nested loops where inner iterations count toward total
+    with pytest.raises(ExecutionError, match="Exceeded maximum iterations"):
+        tiny_exec(
+            """
+for i in range(10):
+    for j in range(10):
+        x = i + j  # 100 total iterations
+""",
+            max_iterations=50,
+            max_iterations_per_loop=20,
+        )
