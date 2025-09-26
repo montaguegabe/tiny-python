@@ -527,7 +527,7 @@ def tiny_eval_last(
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
     allowed_functions: Optional[List[Callable]] = None,
-) -> Dict[str, Any]:
+) -> Any:
     """
     Used by the test suite to get the last result of the code.
     """
