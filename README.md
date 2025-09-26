@@ -147,7 +147,7 @@ Parameters:
 - `global_vars`: Dictionary of global variables to make available
 - `allowed_functions`: List of functions that may be called
 
-Returns a dictionary containing all local variables created during execution. The executor instance is stored in the returned dictionary under the key `"__executor__"`, which provides access to `executor.last_result` for the value of the last expression.
+Returns a dictionary containing all local variables created during execution.
 
 ## Supported Operations
 
