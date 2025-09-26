@@ -1,9 +1,9 @@
-from tiny_python import safe_exec
+from tiny_python import tiny_exec
 
 
 def test_list_creation():
-    assert safe_exec("[1, 2, 3]") == [1, 2, 3]
-    assert safe_exec("[]") == []
+    assert tiny_exec("[1, 2, 3]") == [1, 2, 3]
+    assert tiny_exec("[]") == []
 
 
 def test_list_append():
@@ -12,7 +12,7 @@ numbers = [1, 2, 3]
 numbers.append(4)
 numbers
 """
-    assert safe_exec(code) == [1, 2, 3, 4]
+    assert tiny_exec(code) == [1, 2, 3, 4]
 
 
 def test_list_extend():
@@ -21,7 +21,7 @@ numbers = [1, 2, 3]
 numbers.extend([4, 5, 6])
 numbers
 """
-    assert safe_exec(code) == [1, 2, 3, 4, 5, 6]
+    assert tiny_exec(code) == [1, 2, 3, 4, 5, 6]
 
 
 def test_list_operations():
@@ -31,7 +31,7 @@ numbers.append(4)
 numbers.extend([5, 6])
 sum(numbers)
 """
-    assert safe_exec(code) == 21
+    assert tiny_exec(code) == 21
 
 
 def test_list_indexing():
@@ -39,7 +39,7 @@ def test_list_indexing():
 items = [10, 20, 30, 40]
 items[0] + items[-1]
 """
-    assert safe_exec(code) == 50
+    assert tiny_exec(code) == 50
 
 
 def test_list_slicing():
@@ -47,12 +47,12 @@ def test_list_slicing():
 items = [1, 2, 3, 4, 5]
 items[1:4]
 """
-    assert safe_exec(code) == [2, 3, 4]
+    assert tiny_exec(code) == [2, 3, 4]
 
 
 def test_dictionary_creation():
-    assert safe_exec('{"a": 1, "b": 2}') == {"a": 1, "b": 2}
-    assert safe_exec("{}") == {}
+    assert tiny_exec('{"a": 1, "b": 2}') == {"a": 1, "b": 2}
+    assert tiny_exec("{}") == {}
 
 
 def test_dictionary_operations():
@@ -61,7 +61,7 @@ data = {"a": 1, "b": 2}
 data["c"] = 3
 data.get("d", 10)
 """
-    assert safe_exec(code) == 10
+    assert tiny_exec(code) == 10
 
 
 def test_dictionary_methods():
@@ -69,18 +69,18 @@ def test_dictionary_methods():
 data = {"a": 1, "b": 2}
 list(data.keys())
 """
-    assert safe_exec(code) == ["a", "b"]
+    assert tiny_exec(code) == ["a", "b"]
 
     code = """
 data = {"a": 1, "b": 2}
 list(data.values())
 """
-    assert safe_exec(code) == [1, 2]
+    assert tiny_exec(code) == [1, 2]
 
 
 def test_tuple_creation():
-    assert safe_exec("(1, 2, 3)") == (1, 2, 3)
-    assert safe_exec("()") == ()
+    assert tiny_exec("(1, 2, 3)") == (1, 2, 3)
+    assert tiny_exec("()") == ()
 
 
 def test_set_creation():
@@ -88,4 +88,4 @@ def test_set_creation():
 s = set([1, 2, 2, 3])
 len(s)
 """
-    assert safe_exec(code) == 3
+    assert tiny_exec(code) == 3

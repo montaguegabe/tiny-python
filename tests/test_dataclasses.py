@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from tiny_python import safe_exec
+from tiny_python import tiny_exec
 
 
 def test_dataclass_instantiation():
@@ -13,7 +13,7 @@ def test_dataclass_instantiation():
 p = Point(3, 4)
 p.x + p.y
 """
-    result = safe_exec(code, allowed_classes=[Point])
+    result = tiny_exec(code, allowed_classes=[Point])
     assert result == 7
 
 
@@ -27,7 +27,7 @@ def test_dataclass_with_kwargs():
 p = Point(x=5, y=12)
 (p.x ** 2 + p.y ** 2) ** 0.5
 """
-    result = safe_exec(code, allowed_classes=[Point])
+    result = tiny_exec(code, allowed_classes=[Point])
     assert abs(result - 13.0) < 0.01
 
 
@@ -47,13 +47,13 @@ def test_dataclass_with_methods():
 rect = Rectangle(10, 20)
 rect.area()
 """
-    assert safe_exec(code, allowed_classes=[Rectangle], allow_dataclass_methods=True) == 200
+    assert tiny_exec(code, allowed_classes=[Rectangle], allow_dataclass_methods=True) == 200
 
     code = """
 rect = Rectangle(10, 20)
 rect.perimeter()
 """
-    assert safe_exec(code, allowed_classes=[Rectangle], allow_dataclass_methods=True) == 60
+    assert tiny_exec(code, allowed_classes=[Rectangle], allow_dataclass_methods=True) == 60
 
 
 def test_multiple_dataclasses():
@@ -75,7 +75,7 @@ p = Point(0, 0)
 c = Circle(p, 5)
 c.area()
 """
-    result = safe_exec(code, allowed_classes=[Point, Circle], allow_dataclass_methods=True)
+    result = tiny_exec(code, allowed_classes=[Point, Circle], allow_dataclass_methods=True)
     assert abs(result - 78.54) < 0.01
 
 
@@ -89,5 +89,5 @@ def test_dataclass_attribute_access():
 p = Person("Alice", 30)
 p.name + " is " + str(p.age) + " years old"
 """
-    result = safe_exec(code, allowed_classes=[Person])
+    result = tiny_exec(code, allowed_classes=[Person])
     assert result == "Alice is 30 years old"

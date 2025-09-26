@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from tiny_python import Executor, safe_exec
+from tiny_python import Executor, tiny_exec
 
 
 def test_executor_initialization():
@@ -52,11 +52,11 @@ for i in range(10):
         assert "iterations" in str(e)
 
 
-def test_safe_exec_vs_executor():
+def test_tiny_exec_vs_executor():
     # Both should give same results
     code = "2 + 3 * 4"
 
-    result1 = safe_exec(code)
+    result1 = tiny_exec(code)
     executor = Executor()
     result2 = executor.execute(code)
 

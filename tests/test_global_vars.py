@@ -1,4 +1,4 @@
-from tiny_python import safe_exec
+from tiny_python import tiny_exec
 
 
 def test_global_vars_access():
@@ -6,7 +6,7 @@ def test_global_vars_access():
 result = pi * radius ** 2
 result
 """
-    result = safe_exec(code, global_vars={"pi": 3.14159, "radius": 5})
+    result = tiny_exec(code, global_vars={"pi": 3.14159, "radius": 5})
     assert abs(result - 78.54) < 0.01
 
 
@@ -16,7 +16,7 @@ local_var = 10
 result = local_var + global_var
 result
 """
-    assert safe_exec(code, global_vars={"global_var": 20}) == 30
+    assert tiny_exec(code, global_vars={"global_var": 20}) == 30
 
 
 def test_global_override():
@@ -25,7 +25,7 @@ x = 100
 x
 """
     # Global x should not override local assignment
-    result = safe_exec(code, global_vars={"x": 50})
+    result = tiny_exec(code, global_vars={"x": 50})
     assert result == 100
 
 
@@ -37,7 +37,9 @@ def test_global_functions():
 result = custom_func(5)
 result
 """
-    assert safe_exec(code, global_vars={"custom_func": custom_func}, allow_global_functions=True) == 10
+    assert (
+        tiny_exec(code, global_vars={"custom_func": custom_func}, allow_global_functions=True) == 10
+    )
 
 
 def test_global_constants():
@@ -45,7 +47,7 @@ def test_global_constants():
 area = WIDTH * HEIGHT
 area
 """
-    result = safe_exec(code, global_vars={"WIDTH": 10, "HEIGHT": 20})
+    result = tiny_exec(code, global_vars={"WIDTH": 10, "HEIGHT": 20})
     assert result == 200
 
 
@@ -56,5 +58,7 @@ def test_mixed_globals():
 result = sqrt(x ** 2 + y ** 2)
 int(result)
 """
-    result = safe_exec(code, global_vars={"sqrt": math.sqrt, "x": 3, "y": 4}, allow_global_functions=True)
+    result = tiny_exec(
+        code, global_vars={"sqrt": math.sqrt, "x": 3, "y": 4}, allow_global_functions=True
+    )
     assert result == 5

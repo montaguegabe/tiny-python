@@ -1,4 +1,4 @@
-from tiny_python import safe_exec
+from tiny_python import tiny_exec
 
 
 def test_if_statement():
@@ -10,7 +10,7 @@ else:
     result = "lesser"
 result
 """
-    assert safe_exec(code) == "greater"
+    assert tiny_exec(code) == "greater"
 
 
 def test_elif_statement():
@@ -24,7 +24,7 @@ else:
     result = "low"
 result
 """
-    assert safe_exec(code) == "medium"
+    assert tiny_exec(code) == "medium"
 
 
 def test_nested_if():
@@ -40,7 +40,7 @@ else:
     result = "neither"
 result
 """
-    assert safe_exec(code) == "both"
+    assert tiny_exec(code) == "both"
 
 
 def test_for_loop():
@@ -50,7 +50,7 @@ for i in range(5):
     total += i
 total
 """
-    assert safe_exec(code) == 10
+    assert tiny_exec(code) == 10
 
 
 def test_for_loop_with_list():
@@ -60,7 +60,7 @@ for i in range(5):
     items.append(i * 2)
 items
 """
-    assert safe_exec(code) == [0, 2, 4, 6, 8]
+    assert tiny_exec(code) == [0, 2, 4, 6, 8]
 
 
 def test_while_loop():
@@ -72,7 +72,7 @@ while value < 100:
     count += 1
 count
 """
-    assert safe_exec(code) == 7
+    assert tiny_exec(code) == 7
 
 
 def test_break_statement():
@@ -84,7 +84,7 @@ for i in range(10):
     result.append(i)
 result
 """
-    assert safe_exec(code) == [0, 1, 2, 3, 4]
+    assert tiny_exec(code) == [0, 1, 2, 3, 4]
 
 
 def test_continue_statement():
@@ -96,7 +96,7 @@ for i in range(5):
     result.append(i)
 result
 """
-    assert safe_exec(code) == [0, 2, 4]
+    assert tiny_exec(code) == [0, 2, 4]
 
 
 def test_break_and_continue():
@@ -110,7 +110,7 @@ for i in range(10):
     result.append(i)
 result
 """
-    assert safe_exec(code) == [0, 2, 4]
+    assert tiny_exec(code) == [0, 2, 4]
 
 
 def test_nested_loops():
@@ -121,7 +121,7 @@ for i in range(3):
         total += i * j
 total
 """
-    assert safe_exec(code) == 9
+    assert tiny_exec(code) == 9
 
 
 def test_for_else():
@@ -133,4 +133,4 @@ else:
     result = "completed"
 result
 """
-    assert safe_exec(code) == "completed"
+    assert tiny_exec(code) == "completed"

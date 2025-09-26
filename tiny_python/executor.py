@@ -30,7 +30,7 @@ class Executor:
             allowed_classes=allowed_classes,
             allow_dataclass_methods=allow_dataclass_methods,
             allow_global_functions=allow_global_functions,
-            global_vars=global_vars
+            global_vars=global_vars,
         )
         self.iteration_count = 0
         self.recursion_depth = 0
@@ -318,7 +318,9 @@ class Executor:
                 if not isinstance(item, (tuple, list)):
                     raise TypeError("Cannot unpack non-sequence in for loop")
                 if len(node.target.elts) != len(item):
-                    raise ValueError(f"Too many values to unpack (expected {len(node.target.elts)})")
+                    raise ValueError(
+                        f"Too many values to unpack (expected {len(node.target.elts)})"
+                    )
                 for t, v in zip(node.target.elts, item):
                     if isinstance(t, ast.Name):
                         self.local_scopes[-1][t.id] = v
@@ -397,10 +399,8 @@ class Executor:
                                 f"Method '{method_name}' is not defined on dataclass '{allowed_cls.__name__}'"
                             )
                         # Ensure it's not a private method
-                        if method_name.startswith('_'):
-                            raise ExecutionError(
-                                f"Cannot call private method '{method_name}'"
-                            )
+                        if method_name.startswith("_"):
+                            raise ExecutionError(f"Cannot call private method '{method_name}'")
                         break
 
                 # If it's not a dataclass instance, fall through to normal attribute access
@@ -458,7 +458,7 @@ class ContinueLoop:
     pass
 
 
-def safe_exec(
+def tiny_exec(
     code: str,
     max_iterations: int = 10000,
     max_recursion_depth: int = 100,
