@@ -48,6 +48,7 @@ class Executor:
         self.allowed_classes = allowed_classes or []
         self.global_vars = global_vars or {}
         self.allowed_functions = allowed_functions or []
+        self.last_result = None  # Store the result of the last executed line
         self.parser = TinyPythonParser(
             allowed_classes=allowed_classes,
             global_vars=global_vars,
@@ -93,18 +94,25 @@ class Executor:
 
         self.builtin_functions = BUILTIN_FUNCTIONS
 
-    def execute(self, code: str) -> Any:
+    def execute(self, code: str) -> Dict[str, Any]:
         self.iteration_count = 0
         self.recursion_depth = 0
         self.local_scopes = [{}]
+        self.last_result = None
 
         tree = self.parser.parse(code)
         result = None
         for node in tree.body:
             result = self._execute_node(node)
             if isinstance(result, ReturnValue):
-                return result.value
-        return result
+                self.last_result = result.value
+                return self.local_scopes[0]
+
+        # Store the last result
+        self.last_result = result
+
+        # Return the local variables dictionary
+        return self.local_scopes[0]
 
     def _check_limits(self):
         self.iteration_count += 1
@@ -499,7 +507,7 @@ def tiny_exec(
     allowed_classes: Optional[List[Type]] = None,
     global_vars: Optional[Dict[str, Any]] = None,
     allowed_functions: Optional[List[Callable]] = None,
-) -> Any:
+) -> Dict[str, Any]:
     executor = Executor(
         max_iterations=max_iterations,
         max_iterations_per_loop=max_iterations_per_loop,
@@ -507,4 +515,29 @@ def tiny_exec(
         global_vars=global_vars,
         allowed_functions=allowed_functions,
     )
-    return executor.execute(code)
+    locals_dict = executor.execute(code)
+
+    return locals_dict
+
+
+def tiny_eval_last(
+    code: str,
+    max_iterations: int = 1000,
+    max_iterations_per_loop: int = 100,
+    allowed_classes: Optional[List[Type]] = None,
+    global_vars: Optional[Dict[str, Any]] = None,
+    allowed_functions: Optional[List[Callable]] = None,
+) -> Dict[str, Any]:
+    """
+    Used by the test suite to get the last result of the code.
+    """
+
+    executor = Executor(
+        max_iterations=max_iterations,
+        max_iterations_per_loop=max_iterations_per_loop,
+        allowed_classes=allowed_classes,
+        global_vars=global_vars,
+        allowed_functions=allowed_functions,
+    )
+    _ = executor.execute(code)
+    return executor.last_result

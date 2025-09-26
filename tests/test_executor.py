@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from tiny_python import Executor, tiny_exec
+from tiny_python import Executor, tiny_eval_last
 
 
 def test_executor_initialization():
@@ -11,12 +11,15 @@ def test_executor_initialization():
 def test_multiple_executions():
     executor = Executor()
 
-    result1 = executor.execute("x = 10; x * 2")
-    assert result1 == 20
+    locals1 = executor.execute("x = 10; x * 2")
+    assert executor.last_result == 20
+    assert locals1["x"] == 10
 
     # Each execution starts fresh
-    result2 = executor.execute("y = 5; y + 3")
-    assert result2 == 8
+    locals2 = executor.execute("y = 5; y + 3")
+    assert executor.last_result == 8
+    assert locals2["y"] == 5
+    assert "x" not in locals2  # Previous execution's variables don't persist
 
 
 def test_executor_with_allowed_classes():
@@ -25,14 +28,15 @@ def test_executor_with_allowed_classes():
         value: int
 
     executor = Executor(allowed_classes=[TestClass])
-    result = executor.execute("obj = TestClass(42); obj.value")
-    assert result == 42
+    locals_dict = executor.execute("obj = TestClass(42); obj.value")
+    assert executor.last_result == 42
+    assert "obj" in locals_dict  # obj should be in locals
 
 
 def test_executor_with_global_vars():
     executor = Executor(global_vars={"pi": 3.14159, "e": 2.71828})
-    result = executor.execute("pi + e")
-    assert abs(result - 5.85987) < 0.00001
+    locals_dict = executor.execute("pi + e")
+    assert abs(executor.last_result - 5.85987) < 0.00001
 
 
 def test_executor_limits():
@@ -49,12 +53,14 @@ for i in range(10):
         assert "iterations" in str(e)
 
 
-def test_tiny_exec_vs_executor():
-    # Both should give same results
+def test_tiny_eval_last_vs_executor():
+    # Both should give same last result
     code = "2 + 3 * 4"
 
-    result1 = tiny_exec(code)
+    result1 = tiny_eval_last(code)
+
     executor = Executor()
-    result2 = executor.execute(code)
+    executor.execute(code)
+    result2 = executor.last_result
 
     assert result1 == result2 == 14

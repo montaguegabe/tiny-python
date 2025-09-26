@@ -1,4 +1,4 @@
-from tiny_python import tiny_exec
+from tiny_python import tiny_eval_last
 
 
 def test_simple_assignment():
@@ -6,7 +6,7 @@ def test_simple_assignment():
 x = 10
 x
 """
-    assert tiny_exec(code) == 10
+    assert tiny_eval_last(code) == 10
 
 
 def test_multiple_assignments():
@@ -16,7 +16,7 @@ y = 20
 z = x + y
 z
 """
-    assert tiny_exec(code) == 30
+    assert tiny_eval_last(code) == 30
 
 
 def test_augmented_assignment():
@@ -26,7 +26,7 @@ x += 5
 x *= 2
 x
 """
-    assert tiny_exec(code) == 30
+    assert tiny_eval_last(code) == 30
 
 
 def test_variable_reassignment():
@@ -36,7 +36,7 @@ x = x + 10
 x = x * 2
 x
 """
-    assert tiny_exec(code) == 30
+    assert tiny_eval_last(code) == 30
 
 
 def test_tuple_unpacking():
@@ -45,4 +45,4 @@ t = (1, 2, 3)
 a, b, c = t
 a + b + c
 """
-    assert tiny_exec(code) == 6
+    assert tiny_eval_last(code) == 6

@@ -1,73 +1,73 @@
 import pytest
 
-from tiny_python import tiny_exec
+from tiny_python import tiny_eval_last
 from tiny_python.executor import ExecutionError
 
 
 def test_import_blocked():
     with pytest.raises(ValueError):
-        tiny_exec("import os")
+        tiny_eval_last("import os")
 
     with pytest.raises(ValueError):
-        tiny_exec("from os import path")
+        tiny_eval_last("from os import path")
 
 
 def test_exec_blocked():
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("exec('print(1)')")
+        tiny_eval_last("exec('print(1)')")
 
 
 def test_eval_blocked():
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("eval('1+1')")
+        tiny_eval_last("eval('1+1')")
 
 
 def test_open_blocked():
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("open('file.txt')")
+        tiny_eval_last("open('file.txt')")
 
 
 def test_compile_blocked():
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("compile('1+1', 'string', 'eval')")
+        tiny_eval_last("compile('1+1', 'string', 'eval')")
 
 
 def test_dunder_access_blocked():
     with pytest.raises(ValueError):
-        tiny_exec("__import__('os')")
+        tiny_eval_last("__import__('os')")
 
     with pytest.raises(ValueError):
-        tiny_exec("__builtins__")
+        tiny_eval_last("__builtins__")
 
     with pytest.raises(ValueError):
-        tiny_exec("__file__")
+        tiny_eval_last("__file__")
 
 
 def test_globals_locals_blocked():
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("globals()")
+        tiny_eval_last("globals()")
 
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("locals()")
+        tiny_eval_last("locals()")
 
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("vars()")
+        tiny_eval_last("vars()")
 
 
 def test_attribute_access_blocked():
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("getattr(str, '__class__')")
+        tiny_eval_last("getattr(str, '__class__')")
 
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("setattr(str, 'test', 123)")
+        tiny_eval_last("setattr(str, 'test', 123)")
 
     with pytest.raises((ValueError, NameError)):
-        tiny_exec("delattr(str, 'test')")
+        tiny_eval_last("delattr(str, 'test')")
 
 
 def test_max_iterations():
     with pytest.raises(ExecutionError, match="iterations"):
-        tiny_exec(
+        tiny_eval_last(
             """
 while True:
     pass
@@ -76,7 +76,7 @@ while True:
         )
 
     with pytest.raises(ExecutionError, match="iterations"):
-        tiny_exec(
+        tiny_eval_last(
             """
 for i in range(1000000):
     x = i * 2
@@ -93,19 +93,19 @@ for i in range(10):
     total += i
 total
 """
-    result = tiny_exec(code, max_iterations=100)
+    result = tiny_eval_last(code, max_iterations=100)
     assert result == 45
 
 
 def test_function_definition_blocked():
     with pytest.raises(ValueError):
-        tiny_exec("""
+        tiny_eval_last("""
 def my_func():
     return 42
 """)
 
     with pytest.raises(ValueError):
-        tiny_exec("""
+        tiny_eval_last("""
 lambda x: x * 2
 """)
 
@@ -115,7 +115,7 @@ def test_max_iterations_per_loop():
 
     # Test with for loop exceeding limit
     with pytest.raises(ExecutionError, match="Exceeded maximum iterations per loop"):
-        tiny_exec(
+        tiny_eval_last(
             """
 total = 0
 for i in range(1000):
@@ -127,7 +127,7 @@ total
 
     # Test with while loop exceeding limit
     with pytest.raises(ExecutionError, match="Exceeded maximum iterations per loop"):
-        tiny_exec(
+        tiny_eval_last(
             """
 i = 0
 while i < 1000:
@@ -138,7 +138,7 @@ i
         )
 
     # Test that loops within limit work fine
-    result = tiny_exec(
+    result = tiny_eval_last(
         """
 total = 0
 for i in range(50):
@@ -150,7 +150,7 @@ total
     assert result == sum(range(50))
 
     # Test nested loops - each loop has its own counter
-    result = tiny_exec(
+    result = tiny_eval_last(
         """
 total = 0
 for i in range(10):
@@ -163,7 +163,7 @@ total
     assert result == 100
 
     # Test that break statement works and doesn't trigger limit
-    result = tiny_exec(
+    result = tiny_eval_last(
         """
 i = 0
 while True:
@@ -182,7 +182,7 @@ def test_max_iterations_vs_max_iterations_per_loop():
 
     # max_iterations_per_loop should trigger first if lower
     with pytest.raises(ExecutionError, match="Exceeded maximum iterations per loop"):
-        tiny_exec(
+        tiny_eval_last(
             """
 for i in range(50):
     pass
@@ -193,7 +193,7 @@ for i in range(50):
 
     # max_iterations should trigger for total operations across multiple loops
     with pytest.raises(ExecutionError, match="Exceeded maximum iterations"):
-        tiny_exec(
+        tiny_eval_last(
             """
 # Each loop is under per-loop limit but total exceeds max_iterations
 for i in range(30):
@@ -209,7 +209,7 @@ for k in range(30):
 
     # Nested loops where inner iterations count toward total
     with pytest.raises(ExecutionError, match="Exceeded maximum iterations"):
-        tiny_exec(
+        tiny_eval_last(
             """
 for i in range(10):
     for j in range(10):
