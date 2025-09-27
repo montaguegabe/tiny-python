@@ -1,6 +1,7 @@
+<img src="./images/logo-nospace.png" width="35" height="37" align="center" />
 # tiny-python
 
-<img src="./images/logo-nospace.png" width="35" height="37" style="vertical-align: bottom;"/> **WARNING: This library is under development and still needs some security testing. Use at your own risk.**
+**WARNING: This library is under development and still needs some security testing. Use at your own risk.**
 
 LLMs are very good at writing python code!
 
