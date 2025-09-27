@@ -1,4 +1,7 @@
-<img src="./images/logo-nospace.png" width="35" height="37" align="center" />
+<p align="center">
+<img src="./images/logo-nospace.png" width="35" height="37" align="center">
+</p>
+
 # tiny-python
 
 **WARNING: This library is under development and still needs some security testing. Use at your own risk.**
