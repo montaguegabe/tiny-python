@@ -1,4 +1,4 @@
-# tiny-python <img src="./images/logo.png" width="35" height="43" style="vertical-align: bottom;"/>
+# tiny-python <img src="./images/logo.png" width="35" height="37" style="vertical-align: bottom;"/>
 
 **WARNING: This library is under development and still needs some security testing. Use at your own risk.**
 
